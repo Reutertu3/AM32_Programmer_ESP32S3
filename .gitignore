@@ -1,0 +1,37 @@
+# --- ESP-IDF build output ---
+/build/
+/sdkconfig
+/sdkconfig.old
+
+# Keep sdkconfig.defaults — it carries the FreeRTOS tick rate, console
+# routing and TinyUSB settings the firmware depends on.
+
+# --- IDF component manager ---
+# Fetched on demand from main/idf_component.yml. The lock file is
+# resolved against the current target, so committing it is what makes a
+# C3-resolved tree silently skip esp_tinyusb after switching to the S3.
+/managed_components/
+/dependencies.lock
+
+# --- editors / tooling ---
+.vscode/
+.idea/
+/.devcontainer/
+compile_commands.json
+*.code-workspace
+
+# --- python (tools/) ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- misc ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+*.log
+*.bak
+*.orig
+*.rej

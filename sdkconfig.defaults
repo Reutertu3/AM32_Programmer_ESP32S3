@@ -1,0 +1,25 @@
+# Target is set by the board definition (PlatformIO) or `idf.py set-target`.
+
+# 1 ms FreeRTOS tick: the bootloader link uses 2-5 ms timeouts and the
+# default 100 Hz tick is far too coarse for them.
+CONFIG_FREERTOS_HZ=1000
+
+# CRITICAL: the console must NOT share the USB endpoint that carries MSP
+# and 4-way traffic. Any log line written there corrupts the protocol
+# stream and the configurator will fail to handshake.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_UART_NUM=0
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=n
+
+# --- ESP32-S3 / TinyUSB backend (ESC4W_USB_TINYUSB = 1) --------------
+# Ignored on the C3, which has no USB-OTG peripheral.
+CONFIG_TINYUSB_CDC_ENABLED=y
+CONFIG_TINYUSB_CDC_COUNT=1
+CONFIG_TINYUSB_CDC_RX_BUFSIZE=512
+CONFIG_TINYUSB_CDC_TX_BUFSIZE=512
+CONFIG_TINYUSB_DEBUG_LEVEL=0
+
+# Quieter boot so nothing unexpected lands on the wire.
+CONFIG_BOOTLOADER_LOG_LEVEL_WARN=y
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y

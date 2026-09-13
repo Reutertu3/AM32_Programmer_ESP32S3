@@ -1,0 +1,4 @@
+dependencies:
+  idf: ">=5.0"
+  # Only pulled in for the ESP32-S3 / TinyUSB backend. Harmless on the C3.
+  espressif/esp_tinyusb: "^1.4.0"
