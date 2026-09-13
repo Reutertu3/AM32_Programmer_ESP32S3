@@ -25,6 +25,7 @@
 /* Number of ESC outputs reported to the configurator via
  * MSP_SET_PASSTHROUGH. Must match the length of ESC4W_ESC_PINS. */
 #define ESC4W_ESC_COUNT              4
+// #define ESC4W_ESC_COUNT              6
 
 /* One GPIO per ESC signal line, in the order the configurator will
  * address them (index 0 = "ESC 1" in the UI).
@@ -45,6 +46,7 @@
  */
 #if ESC4W_USB_TINYUSB
 #  define ESC4W_ESC_PINS             { 4, 5, 6, 7 }      /* ESP32-S3 */
+// #define ESC4W_ESC_PINS               { 4, 5, 6, 7, 8, 9 }
 #else
 #  define ESC4W_ESC_PINS             { 3, 4, 5, 6 }      /* ESP32-C3 */
 #endif
@@ -52,7 +54,7 @@
 /* Optional activity LED. Set to -1 to disable.
  * Note: GPIO48 on the S3-DevKitC-1 and GPIO8 on many C3 devkits are
  * addressable WS2812s, not plain LEDs. */
-#define ESC4W_LED_PIN                (-1)
+#define ESC4W_LED_PIN                (21)
 #define ESC4W_LED_ACTIVE_LOW         0
 
 /* ------------------------------------------------------------------ */
