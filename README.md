@@ -61,8 +61,10 @@ idf.py build
 idf.py -p /dev/ttyUSB0 flash
 ```
 
-ESP-IDF v5.x. `main/idf_component.yml` pulls `espressif/esp_tinyusb`
-automatically on first build.
+ESP-IDF v5.3 or newer (the `esp_driver_*` components `main` requires by
+name were split out in 5.3); tested against v6.0.1.
+`main/idf_component.yml` pulls `espressif/esp_tinyusb` automatically on
+first build.
 
 If `sdkconfig` already exists from an earlier build, delete it —
 `sdkconfig.defaults` is only consulted when `sdkconfig` is first
@@ -148,7 +150,7 @@ Test order:
    `MSP_SET_PASSTHROUGH`, `cmd_DeviceInitFlash` on each index, and
    `cmd_DeviceRead` — no writes.
 2. Scope one signal line during a connect attempt. You should see the
-   17-byte boot init at 19200 8N1, then the ESC's `471x` reply.
+   21-byte boot init at 19200 8N1, then the ESC's `471x` reply.
 3. Only then try a settings write, on one ESC, with a known-good
    firmware image on hand.
 

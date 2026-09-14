@@ -1,6 +1,6 @@
 /*
  * config.h — all board- and behaviour-specific settings for the
- * ESP32-C3 BLHeli/AM32 4-way USB programmer.
+ * ESP32-S3 / ESP32-C3 BLHeli/AM32 4-way USB programmer.
  *
  * Nothing outside this file should need editing for a new board.
  */
@@ -76,9 +76,9 @@
  * Push-pull is the safer default on longer leads. */
 #define ESC4W_TX_PUSH_PULL           1
 
-/* Enable the internal pull-up on the idle/receive line. The C3's
- * internal pull-up is weak (~45 kOhm); an external 10 kOhm to 3V3 on
- * each signal line is recommended for anything over ~10 cm. */
+/* Enable the internal pull-up on the idle/receive line. The internal
+ * pull-up is weak (~45 kOhm); an external 10 kOhm to 3V3 on each signal
+ * line is recommended for anything over ~10 cm. */
 #define ESC4W_RX_INTERNAL_PULLUP     1
 
 /* ------------------------------------------------------------------ */
@@ -138,13 +138,18 @@
 #define ESC4W_MSP_FC_VER_PATCH       1
 
 #define ESC4W_MSP_BOARD_ID           "ESPC"      /* exactly 4 chars */
-#define ESC4W_MSP_TARGET_NAME        "ESP32C3_4WAY"
-#define ESC4W_MSP_BOARD_NAME         "esc4way-c3"
+#if ESC4W_USB_TINYUSB
+#  define ESC4W_MSP_TARGET_NAME      "ESP32S3_4WAY"
+#  define ESC4W_MSP_BOARD_NAME       "esc4way-s3"
+#else
+#  define ESC4W_MSP_TARGET_NAME      "ESP32C3_4WAY"
+#  define ESC4W_MSP_BOARD_NAME       "esc4way-c3"
+#endif
 #define ESC4W_MSP_MANUFACTURER_ID    "CUST"      /* exactly 4 chars */
 
 #define ESC4W_MSP_BUILD_DATE         "Jan 01 2026"   /* exactly 11 */
 #define ESC4W_MSP_BUILD_TIME         "00:00:00"      /* exactly 8  */
-#define ESC4W_MSP_GIT_REVISION       "esc4wc3"       /* exactly 7  */
+#define ESC4W_MSP_GIT_REVISION       "esc4way"       /* exactly 7  */
 
 /* 12-byte unique ID reported by MSP_UID. Derived from the chip MAC at
  * runtime when set to 1, otherwise the fixed value below is used. */

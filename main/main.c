@@ -1,5 +1,6 @@
 /*
- * ESP32-C3 USB programmer for BLHeli_S / BLHeli_32 / AM32 4-in-1 ESCs.
+ * ESP32-S3 / ESP32-C3 USB programmer for BLHeli_S / BLHeli_32 / AM32
+ * 4-in-1 ESCs.
  *
  * Presents itself over native USB CDC as a flight controller: answers
  * enough MSP to satisfy a configurator, then switches the same endpoint

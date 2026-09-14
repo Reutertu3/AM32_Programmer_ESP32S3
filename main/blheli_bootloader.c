@@ -121,14 +121,20 @@ static uint8_t bl_get_ack(uint32_t count)
 
 bool bl_connect(void)
 {
-    /* 8 leading zero bytes then the literal boot sequence. Upstream
-     * sends 12 zeros instead when the SimonK/STK bootloader is also
-     * compiled in; this port is BLB-only. */
+    /* 12 leading zero bytes of line sync, then the literal boot
+     * sequence — 21 bytes, exactly BL_ConnectEx()'s BootInit[]. */
     static const uint8_t boot_init[] = {
-        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0x0D, 'B', 'L', 'H', 'e', 'l', 'i', 0xF4, 0x7D
     };
     uint8_t boot_info[8];
+
+    /* Clear the connection state first, as upstream does. Otherwise a
+     * device that answers "471x" with an unrecognised signature leaves
+     * bl_is_connected() true, and the remaining retries in
+     * esc4way_connect() send this handshake with a CRC appended and
+     * expect one back — which no bootloader will answer. */
+    memset(bl_device_info, 0, sizeof(bl_device_info));
 
     bl_send(boot_init, sizeof(boot_init));
 
@@ -265,5 +271,8 @@ uint8_t bl_verify_flash(bl_mem_t *mem)
     }
     const uint8_t cmd[] = { CMD_VERIFY_FLASH_ARM, 0x01 };
     bl_send(cmd, sizeof(cmd));
-    return bl_get_ack(40 / ESC4W_ACK_TICK_MS);
+    /* bl_get_ack() counts start-bit timeouts, not milliseconds — 40 here
+     * is upstream's BL_GetACK(40), i.e. 80 ms, same unit as the count in
+     * bl_set_buffer() above. */
+    return bl_get_ack(40);
 }

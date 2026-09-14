@@ -1,9 +1,10 @@
 /*
  * host_link.h — byte transport to the configurator.
  *
- * The ESP32-C3's native USB Serial/JTAG peripheral is used as a CDC
- * device on the fixed pins GPIO18 (D-) and GPIO19 (D+). No external
- * USB-serial bridge and no CP2102 involved.
+ * Two backends, selected by ESC4W_USB_TINYUSB in config.h: TinyUSB over
+ * the ESP32-S3's USB-OTG peripheral (GPIO19/20), or the ESP32-C3's
+ * native USB Serial/JTAG (GPIO18/19). Either way the device is CDC — no
+ * external USB-serial bridge and no CP2102 involved.
  */
 #pragma once
 

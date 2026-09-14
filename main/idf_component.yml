@@ -1,4 +1,12 @@
 dependencies:
-  idf: ">=5.0"
-  # Only pulled in for the ESP32-S3 / TinyUSB backend. Harmless on the C3.
-  espressif/esp_tinyusb: "^1.4.0"
+  # esp_driver_uart / esp_driver_gpio / esp_driver_usb_serial_jtag became
+  # separate components in 5.3; main/CMakeLists.txt requires them by name.
+  idf: ">=5.3"
+  # Only the ESP32-S3 / TinyUSB backend needs this, and it is not merely
+  # unused on the C3 — espressif/tinyusb declares a `targets:` list that
+  # excludes esp32c3, so an unconditional dependency makes the solver
+  # fail outright there. Gate it on the targets that have USB-OTG.
+  espressif/esp_tinyusb:
+    version: "^1.4.0"
+    rules:
+      - if: "target in [esp32s2, esp32s3, esp32p4]"

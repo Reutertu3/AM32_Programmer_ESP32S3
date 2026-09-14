@@ -79,31 +79,31 @@ void host_link_init(void)
     tinyusb_config_cdcacm_t acm_cfg = { 0 };
     acm_cfg.usb_dev          = TINYUSB_USBDEV_0;
     acm_cfg.cdc_port         = CDC_PORT;
-    acm_cfg.rx_unread_buf_sz = 1024;
+    /* No rx_unread_buf_sz here: it is deprecated and ignored in
+     * esp_tinyusb >= 1.7. The RX ring is CONFIG_TINYUSB_CDC_RX_BUFSIZE. */
     ESP_ERROR_CHECK(tusb_cdc_acm_init(&acm_cfg));
 }
 
 bool host_read_byte(uint8_t *b, uint32_t timeout_us)
 {
     size_t rx = 0;
-
-    if (timeout_us == 0) {
-        for (;;) {
-            if (tinyusb_cdcacm_read(CDC_PORT, b, 1, &rx) == ESP_OK && rx == 1) {
-                return true;
-            }
-            vTaskDelay(1);
-        }
-    }
-
+    const bool forever = (timeout_us == 0);
     const int64_t deadline = esp_timer_get_time() + (int64_t)timeout_us;
-    do {
+
+    for (;;) {
         if (tinyusb_cdcacm_read(CDC_PORT, b, 1, &rx) == ESP_OK && rx == 1) {
             return true;
         }
-    } while (esp_timer_get_time() < deadline);
-
-    return false;
+        if (!forever && esp_timer_get_time() >= deadline) {
+            return false;
+        }
+        /* tinyusb_cdcacm_read() is non-blocking — it reports zero bytes
+         * and returns. Without an explicit yield this spins at 100% on
+         * the core app_main is pinned to, starves the idle task and
+         * trips the task watchdog. Costs at most one tick of latency,
+         * and only when the RX ring is already empty. */
+        vTaskDelay(1);
+    }
 }
 
 void host_write(const uint8_t *buf, uint16_t len)

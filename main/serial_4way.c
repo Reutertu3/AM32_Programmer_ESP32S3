@@ -255,7 +255,12 @@ void esc4way_process(void)
                 if (s_param_buf[0] < s_esc_count) {
                     s_selected_esc = s_param_buf[0];
                     esc_io_select(s_selected_esc);
-                    if (addr_lo == 1) {
+                    /* Upstream reads ParamBuf[1] unconditionally, which
+                     * is a stale byte when the host sends only the ESC
+                     * index — as both ESC Configurator and the AM32
+                     * Configurator do. Same meaning, without the read of
+                     * a parameter that was never sent. */
+                    if (in_param_len >= 2 && s_param_buf[1] != 0) {
                         reboot_esc = true;
                     }
                 } else {

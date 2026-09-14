@@ -6,7 +6,8 @@
 #include "driver/uart.h"
 #include "esp_rom_gpio.h"
 #include "esp_timer.h"
-#include "soc/uart_periph.h"
+/* soc/uart_periph.h (and its uart_periph_signal[] table) was removed in
+ * ESP-IDF 6.0; the per-target signal indices below replace it. */
 #include "soc/gpio_sig_map.h"
 
 #include "config.h"
@@ -19,22 +20,34 @@ static bool    s_inited   = false;
 static uint8_t s_scratch[64];
 
 #define ESC_UART ((uart_port_t)ESC4W_UART_NUM)
+#if ESC4W_UART_NUM == 1
+#  define ESC_TX_SIG  U1TXD_OUT_IDX
+#  define ESC_RX_SIG  U1RXD_IN_IDX
+#elif ESC4W_UART_NUM == 2
+#  define ESC_TX_SIG  U2TXD_OUT_IDX
+#  define ESC_RX_SIG  U2RXD_IN_IDX
+#else
+#  error "pick UART1 or UART2 — UART0 is the console"
+#endif
 
-static inline uint32_t esc_tx_signal(void)
-{
-    return uart_periph_signal[ESC4W_UART_NUM].pins[SOC_UART_TX_PIN_IDX].signal;
-}
+static inline uint32_t esc_tx_signal(void) { return ESC_TX_SIG; }
+static inline uint32_t esc_rx_signal(void) { return ESC_RX_SIG; }
 
-static inline uint32_t esc_rx_signal(void)
-{
-    return uart_periph_signal[ESC4W_UART_NUM].pins[SOC_UART_RX_PIN_IDX].signal;
-}
-
-/* Park a pin: detached from the UART, pulled-up input, line idle high. */
+/* Park a pin: detached from the UART, pulled-up input, line idle high.
+ *
+ * Order matters. Detaching the UART signal first re-points a pad whose
+ * output driver is still enabled (INPUT_OUTPUT, during a transmit) at
+ * the GPIO output register, which holds 0 after gpio_reset_pin() — that
+ * yanks the idle-high line low for the microseconds until the direction
+ * change lands, right before we start listening for the reply.
+ * gpio_set_direction(INPUT) clears the enable bit and takes OE away from
+ * the peripheral, so dropping the driver first is enough; the level
+ * write makes even a re-enable benign. */
 static void esc_pin_park(int pin)
 {
-    esp_rom_gpio_connect_out_signal(pin, SIG_GPIO_OUT_IDX, false, false);
+    gpio_set_level(pin, 1);
     gpio_set_direction(pin, GPIO_MODE_INPUT);
+    esp_rom_gpio_connect_out_signal(pin, SIG_GPIO_OUT_IDX, false, false);
 #if ESC4W_RX_INTERNAL_PULLUP
     gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
 #else
@@ -179,8 +192,10 @@ void esc_io_pulse_low(uint32_t ms)
     const int pin = s_esc_pins[s_selected];
 
     esp_rom_gpio_connect_out_signal(pin, SIG_GPIO_OUT_IDX, false, false);
-    gpio_set_direction(pin, GPIO_MODE_OUTPUT);
+    /* Load the level before enabling the driver, so the pulse starts at
+     * its leading edge instead of a brief high from the parked state. */
     gpio_set_level(pin, 0);
+    gpio_set_direction(pin, GPIO_MODE_OUTPUT);
     vTaskDelay(pdMS_TO_TICKS(ms));
     gpio_set_level(pin, 1);
 
