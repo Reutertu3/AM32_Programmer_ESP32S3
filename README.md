@@ -137,6 +137,26 @@ life; any other response means the link is gone.
   paths respectively.
 - Not needed for AM32 or BLHeli_32.
 
+## Diagnostic trace
+
+With `ESC4W_LOG_ENABLE` (S3 only) the adapter enumerates as **two**
+serial ports: USB interface 0 carries MSP/4-way for the configurator,
+interface 2 carries a human-readable trace. Don't trust `ttyACM0/1`:
+Linux keeps a ttyACM number reserved while any program still has the
+old device open, so after a reflash the pair can come back as
+ACM1/ACM2. Use the stable names instead:
+
+```
+ls -l /dev/serial/by-id/
+tio /dev/serial/by-id/usb-STMicroelectronics_STM32_Virtual_ComPort_esc4way-s3-if02
+```
+
+`-if00` is the configurator port, `-if02` the trace. Opening the trace
+port prints a banner identifying it, so you know you are on the right
+one. After that it logs every MSP request, every 4-way command, and for
+each bootloader connect attempt: the line level, how many bytes echoed
+back, and the raw reply.
+
 ## Verify before trusting it
 
 Ported against Betaflight master `src/main/io/serial_4way.c`,

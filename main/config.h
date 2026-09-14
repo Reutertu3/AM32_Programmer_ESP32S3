@@ -45,7 +45,7 @@
  *   GPIO2, 8, 9       strapping pins
  */
 #if ESC4W_USB_TINYUSB
-#  define ESC4W_ESC_PINS             { 4, 5, 6, 7 }      /* ESP32-S3 */
+# define ESC4W_ESC_PINS             { 4, 5, 6, 7 }      /* ESP32-S3 */
 // #define ESC4W_ESC_PINS               { 4, 5, 6, 7, 8, 9 }
 #else
 #  define ESC4W_ESC_PINS             { 3, 4, 5, 6 }      /* ESP32-C3 */
@@ -194,6 +194,10 @@
 /* UART driver RX ring for the one-wire link. */
 #define ESC4W_UART_RX_BUF_SIZE       512
 
-/* Verbose logging. MUST stay routed to UART0 — writing log text to the
- * USB CDC endpoint corrupts the MSP/4-way stream. See sdkconfig.defaults. */
-#define ESC4W_LOG_ENABLE             0
+/* Diagnostic trace on a second USB CDC port (S3/TinyUSB only) — never
+ * on the protocol port, where any stray byte corrupts the MSP/4-way
+ * stream. Requires CONFIG_TINYUSB_CDC_COUNT=2 (set in sdkconfig.defaults).
+ * On Linux: protocol on /dev/ttyACM0, trace on /dev/ttyACM1, e.g.
+ *     picocom /dev/ttyACM1
+ * Silent unless a terminal holds the trace port open. */
+#define ESC4W_LOG_ENABLE             1

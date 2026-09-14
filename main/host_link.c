@@ -12,6 +12,9 @@
  *
  * Never enable both: each installs its own ISR on the USB peripheral.
  */
+#include <stdarg.h>
+#include <stdio.h>
+
 #include "config.h"
 #include "host_link.h"
 
@@ -20,8 +23,13 @@
 #include "esp_timer.h"
 
 #if ESC4W_USB_TINYUSB
+#  include "sdkconfig.h"
+#  include "tusb.h"
 #  include "tinyusb.h"
 #  include "tusb_cdc_acm.h"
+#  if ESC4W_LOG_ENABLE && CONFIG_TINYUSB_CDC_COUNT < 2
+#    error "ESC4W_LOG_ENABLE needs CONFIG_TINYUSB_CDC_COUNT=2 in sdkconfig"
+#  endif
 #else
 #  include "driver/usb_serial_jtag.h"
 #endif
@@ -30,7 +38,8 @@
 #if ESC4W_USB_TINYUSB
 /* ------------------------------------------------------------------ */
 
-#define CDC_PORT TINYUSB_CDC_ACM_0
+#define CDC_PORT TINYUSB_CDC_ACM_0   /* MSP / 4-way protocol */
+#define LOG_PORT TINYUSB_CDC_ACM_1   /* diagnostic trace */
 
 void host_link_init(void)
 {
@@ -82,6 +91,11 @@ void host_link_init(void)
     /* No rx_unread_buf_sz here: it is deprecated and ignored in
      * esp_tinyusb >= 1.7. The RX ring is CONFIG_TINYUSB_CDC_RX_BUFSIZE. */
     ESP_ERROR_CHECK(tusb_cdc_acm_init(&acm_cfg));
+
+#if ESC4W_LOG_ENABLE
+    acm_cfg.cdc_port = LOG_PORT;
+    ESP_ERROR_CHECK(tusb_cdc_acm_init(&acm_cfg));
+#endif
 }
 
 bool host_read_byte(uint8_t *b, uint32_t timeout_us)
@@ -127,6 +141,64 @@ void host_flush(void)
 {
     tinyusb_cdcacm_write_flush(CDC_PORT, pdMS_TO_TICKS(100));
 }
+
+#if ESC4W_LOG_ENABLE
+static void log_emit(char *line, int n, size_t cap)
+{
+    /* Leave room for the CRLF; vsnprintf() reports the untruncated
+     * length, so clamp to what actually landed in the buffer. */
+    if (n < 0) {
+        return;
+    }
+    if ((size_t)n > cap - 3) {
+        n = (int)(cap - 3);
+    }
+    line[n++] = '\r';
+    line[n++] = '\n';
+    tinyusb_cdcacm_write_queue(LOG_PORT, (const uint8_t *)line, (size_t)n);
+    tinyusb_cdcacm_write_flush(LOG_PORT, 0);
+}
+
+bool host_log_just_opened(void)
+{
+    static bool s_was_open;
+    bool open = tud_cdc_n_connected(LOG_PORT);
+    bool edge = open && !s_was_open;
+    s_was_open = open;
+    return edge;
+}
+
+void host_log(const char *fmt, ...)
+{
+    /* DTR is asserted by every terminal (and by Linux on open), so this
+     * is "someone is listening". Nobody listening costs one call. */
+    if (!tud_cdc_n_connected(LOG_PORT)) {
+        return;
+    }
+    char line[160];
+    va_list ap;
+    va_start(ap, fmt);
+    int n = vsnprintf(line, sizeof(line), fmt, ap);
+    va_end(ap);
+    log_emit(line, n, sizeof(line));
+}
+
+void host_log_hex(const char *prefix, const uint8_t *buf, uint16_t len)
+{
+    if (!tud_cdc_n_connected(LOG_PORT)) {
+        return;
+    }
+    char line[160];
+    int n = snprintf(line, sizeof(line), "%s", prefix);
+    for (uint16_t i = 0; i < len && n < (int)sizeof(line) - 8; i++) {
+        n += snprintf(line + n, sizeof(line) - (size_t)n, " %02X", buf[i]);
+    }
+    if (len == 0 && n < (int)sizeof(line) - 8) {
+        n += snprintf(line + n, sizeof(line) - (size_t)n, " (none)");
+    }
+    log_emit(line, n, sizeof(line));
+}
+#endif
 
 /* ------------------------------------------------------------------ */
 #else   /* ESP32-C3 native USB Serial/JTAG */

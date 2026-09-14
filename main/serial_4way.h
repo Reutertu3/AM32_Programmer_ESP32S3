@@ -21,6 +21,9 @@
  * value returned to the configurator in the MSP_SET_PASSTHROUGH reply. */
 uint8_t esc4way_init(void);
 
+/* Trace the GPIO and current level of every ESC pad. */
+void esc4way_log_levels(const char *prefix);
+
 /* Run the 4-way command loop. Blocks until the host sends
  * cmd_InterfaceExit, then releases the pins and returns. */
 void esc4way_process(void);

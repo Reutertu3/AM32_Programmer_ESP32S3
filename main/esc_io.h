@@ -25,8 +25,9 @@ bool esc_io_select(uint8_t index);
 
 /* Send len bytes on the selected pin, blocking until the last stop bit
  * has left the shift register. The local echo is consumed and
- * discarded, so the RX path is clean on return. */
-void esc_io_write(const uint8_t *buf, uint16_t len);
+ * discarded, so the RX path is clean on return. Returns the number of
+ * echo bytes seen: len means our frame really went out on the pad. */
+uint16_t esc_io_write(const uint8_t *buf, uint16_t len);
 
 /* Read up to len bytes. timeout_ms is a per-byte timeout, matching the
  * start-bit timeout semantics of the upstream bit-bang receiver.
@@ -39,3 +40,9 @@ void esc_io_flush(void);
 /* Drive the selected pin low for ms milliseconds, then release it.
  * Used by cmd_DeviceReset to hard-reboot an ESC. */
 void esc_io_pulse_low(uint32_t ms);
+
+/* Diagnostics. GPIO number behind an ESC index (-1 if out of range),
+ * and the current level of a parked pad: 1 is the idle-high line a
+ * bootloader needs, 0 means something is holding it low. */
+int esc_io_pin(uint8_t index);
+int esc_io_level(uint8_t index);

@@ -337,6 +337,9 @@ static void dispatch(void)
     } else {
         send_reply_v1(s_cmd, ok);
     }
+    /* After the reply, so tracing never delays it. */
+    host_log("msp%s %u -> %s, %u bytes", s_is_v2 ? " v2" : "", s_cmd,
+             ok ? "ok" : "unhandled", s_out_len);
 }
 
 void msp_process_byte(uint8_t b)
@@ -397,6 +400,8 @@ void msp_process_byte(uint8_t b)
     case ST_V1_CRC:
         if (b == s_crc) {
             dispatch();
+        } else {
+            host_log("msp %u: bad checksum, dropped", s_cmd);
         }
         s_state = ST_IDLE;
         break;
@@ -448,6 +453,8 @@ void msp_process_byte(uint8_t b)
     case ST_V2_CRC:
         if (b == s_crc) {
             dispatch();
+        } else {
+            host_log("msp v2 %u: bad checksum, dropped", s_cmd);
         }
         s_state = ST_IDLE;
         break;

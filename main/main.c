@@ -50,10 +50,25 @@ static void esc4way_setup(void)
     msp_init();
 }
 
+/* Printed whenever a terminal opens the trace port, so there is never
+ * any doubt which of the two ports you are looking at. */
+static void trace_banner(void)
+{
+    host_log("%s", "");
+    host_log("=== esc4way trace port (USB interface 2) ===");
+    host_log("The configurator belongs on the OTHER port (interface 0).");
+    esc4way_log_levels("config:");
+    host_log("Waiting for MSP...");
+}
+
 /* One pass of the service loop. Returns after at most 100 ms idle. */
 static void esc4way_service(void)
 {
     uint8_t b;
+
+    if (host_log_just_opened()) {
+        trace_banner();
+    }
     if (host_read_byte(&b, 100000)) {
         msp_process_byte(b);
 

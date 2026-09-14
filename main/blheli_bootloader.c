@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "esc_io.h"
+#include "host_link.h"
 #include "blheli_bootloader.h"
 
 /* Bootloader commands */
@@ -33,6 +34,10 @@ uint8_t bl_device_info[4] = { 0, 0, 0, 0 };
 
 static uint16_t s_crc;
 
+/* Diagnostics: what the last bl_read() actually got off the wire. */
+static uint16_t s_rx_got;   /* payload bytes that arrived */
+static uint8_t  s_rx_ack;   /* trailing ACK, brNONE if it never came */
+
 /* Betaflight's BL_GetACK(n) is n iterations of a start-bit timeout. */
 static inline uint32_t ack_ms(uint32_t count)
 {
@@ -59,7 +64,7 @@ static void crc_byte(uint8_t b)
 
 /* The handshake runs without CRC; every transaction after a successful
  * connect carries one. bl_is_connected() decides, exactly as upstream. */
-static void bl_send(const uint8_t *buf, uint16_t len)
+static uint16_t bl_send(const uint8_t *buf, uint16_t len)
 {
     uint8_t frame[ESC4W_PARAM_BUF_SIZE + 4];
     uint16_t n = 0;
@@ -73,7 +78,7 @@ static void bl_send(const uint8_t *buf, uint16_t len)
         frame[n++] = (uint8_t)(s_crc & 0xFF);
         frame[n++] = (uint8_t)(s_crc >> 8);
     }
-    esc_io_write(frame, n);
+    return esc_io_write(frame, n);
 }
 
 static bool bl_read(uint8_t *buf, uint16_t len)
@@ -82,8 +87,10 @@ static bool bl_read(uint8_t *buf, uint16_t len)
     uint8_t trailer[3];
 
     s_crc = 0;
+    s_rx_ack = brNONE;
 
-    if (esc_io_read(buf, len, ESC4W_BYTE_TIMEOUT_MS) != len) {
+    s_rx_got = esc_io_read(buf, len, ESC4W_BYTE_TIMEOUT_MS);
+    if (s_rx_got != len) {
         return false;
     }
     for (uint16_t i = 0; i < len; i++) {
@@ -103,6 +110,7 @@ static bool bl_read(uint8_t *buf, uint16_t len)
         }
     }
 
+    s_rx_ack = last_ack;
     return last_ack == brSUCCESS;
 }
 
@@ -136,9 +144,19 @@ bool bl_connect(void)
      * expect one back — which no bootloader will answer. */
     memset(bl_device_info, 0, sizeof(bl_device_info));
 
-    bl_send(boot_init, sizeof(boot_init));
+    uint16_t echo = bl_send(boot_init, sizeof(boot_init));
+    bool ok = bl_read(boot_info, sizeof(boot_info));
 
-    if (!bl_read(boot_info, sizeof(boot_info))) {
+    /* echo < sent: our frame never made it onto the pad.
+     * echo == sent, reply 0: we transmit fine, nothing answers.
+     * reply > 0 but not "471": something answers, garbled. */
+    host_log("  connect: sent %u echo %u, reply %u/%u, ack %02X",
+             (unsigned)sizeof(boot_init), echo, s_rx_got,
+             (unsigned)sizeof(boot_info), s_rx_ack);
+    if (s_rx_got > 0) {
+        host_log_hex("  reply:", boot_info, s_rx_got);
+    }
+    if (!ok) {
         return false;
     }
 
@@ -212,7 +230,12 @@ static bool bl_read_a(uint8_t command, bl_mem_t *mem)
     bl_send(cmd, sizeof(cmd));
 
     uint16_t len = mem->num_bytes ? mem->num_bytes : 256;
-    return bl_read(mem->ptr, len);
+    if (!bl_read(mem->ptr, len)) {
+        host_log("  read %02X%02X: reply %u/%u, ack %02X",
+                 mem->addr_hi, mem->addr_lo, s_rx_got, len, s_rx_ack);
+        return false;
+    }
+    return true;
 }
 
 static bool bl_write_a(uint8_t command, bl_mem_t *mem, uint32_t timeout_count)

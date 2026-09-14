@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "freertos/FreeRTOS.h"
@@ -91,7 +92,23 @@ uint8_t esc4way_init(void)
     bl_set_disconnected();
     bl_device_info[2] = 0;
     bl_device_info[INTF_MODE_IDX] = 0;
+
+    esc4way_log_levels("passthrough:");
     return s_esc_count;
+}
+
+void esc4way_log_levels(const char *prefix)
+{
+    /* Idle level of every parked pad. A bootloader only waits for us
+     * while its signal line reads high; a 0 here means the ESC side is
+     * pulling the line down harder than our pull-up holds it up. */
+    char levels[96];
+    int n = 0;
+    for (uint8_t i = 0; i < ESC4W_ESC_COUNT && n < (int)sizeof(levels) - 16; i++) {
+        n += snprintf(levels + n, sizeof(levels) - (size_t)n, " GPIO%d=%d",
+                      esc_io_pin(i), esc_io_level(i));
+    }
+    host_log("%s %u ESCs, idle levels:%s", prefix, ESC4W_ESC_COUNT, levels);
 }
 
 static void esc4way_release(void)
@@ -120,6 +137,7 @@ static bool esc4way_connect(void)
             s_interface_mode = imARM_BLB;
             return true;
         }
+        host_log("  bootloader answered, unknown signature %04X", sig);
     }
     return false;
 }
@@ -148,7 +166,7 @@ void esc4way_process(void)
     bool exit_scheduled = false;
 
     for (;;) {
-        uint8_t esc, cmd, in_param_len, ack_out;
+        uint8_t esc, cmd = 0, in_param_len = 0, ack_out;
         uint8_t addr_hi = 0, addr_lo = 0;
         uint16_t crc_check = 0;
         uint8_t dummy[2] = { 0, 0 };
@@ -187,6 +205,9 @@ void esc4way_process(void)
 
         ack_out = (!timed_out && crc_check == s_crc_in) ? ACK_OK
                                                         : ACK_I_INVALID_CRC;
+        host_log("4w cmd %02X addr %02X%02X len %u%s", cmd, addr_hi, addr_lo,
+                 in_param_len ? in_param_len : 256,
+                 timed_out ? " TIMEOUT" : (ack_out != ACK_OK ? " BAD CRC" : ""));
 
         mem.addr_hi = addr_hi;
         mem.addr_lo = addr_lo;
@@ -294,8 +315,13 @@ void esc4way_process(void)
                 }
                 out_param_len = 4;
                 out_param = bl_device_info;
+                host_log("  init ESC %u (GPIO%d), line %d before connect",
+                         s_selected_esc + 1, esc_io_pin(s_selected_esc),
+                         esc_io_level(s_selected_esc));
                 if (esc4way_connect()) {
                     bl_device_info[INTF_MODE_IDX] = s_interface_mode;
+                    host_log("  connected: signature %04X, mode %u",
+                             bl_signature(), s_interface_mode);
                 } else {
                     bl_set_disconnected();
                     ack_out = ACK_D_GENERAL_ERROR;
@@ -449,6 +475,7 @@ void esc4way_process(void)
 
         host_write(s_reply_buf, n);
         host_flush();
+        host_log("   -> ack %02X, %u bytes", ack_out, out_param_len);
 
         if (exit_scheduled) {
             esc4way_release();
