@@ -13,30 +13,12 @@
  */
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/gpio.h"
 
-#include "config.h"
 #include "host_link.h"
 #include "msp.h"
 #include "serial_4way.h"
 #include "esc_io.h"
-
-#if ESC4W_LED_PIN >= 0
-static void led_init(void)
-{
-    gpio_reset_pin((gpio_num_t)ESC4W_LED_PIN);
-    gpio_set_direction((gpio_num_t)ESC4W_LED_PIN, GPIO_MODE_OUTPUT);
-    gpio_set_level((gpio_num_t)ESC4W_LED_PIN, ESC4W_LED_ACTIVE_LOW ? 1 : 0);
-}
-
-static void led_set(bool on)
-{
-    gpio_set_level((gpio_num_t)ESC4W_LED_PIN, ESC4W_LED_ACTIVE_LOW ? !on : on);
-}
-#else
-static void led_init(void) { }
-static void led_set(bool on) { (void)on; }
-#endif
+#include "led.h"
 
 static void esc4way_setup(void)
 {

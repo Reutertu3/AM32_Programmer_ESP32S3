@@ -8,6 +8,7 @@
 #include "esc_io.h"
 #include "host_link.h"
 #include "blheli_bootloader.h"
+#include "led.h"
 #include "serial_4way.h"
 
 /* Frame delimiters */
@@ -215,6 +216,21 @@ void esc4way_process(void)
         mem.num_bytes = 0;
 
         if (ack_out == ACK_OK) {
+            /* Flash the LED for anything that moves ESC memory. One GPIO
+             * write, so it cannot disturb the one-wire timing. */
+            switch (cmd) {
+            case cmd_DevicePageErase:
+            case cmd_DeviceRead:
+            case cmd_DeviceWrite:
+            case cmd_DeviceReadEEprom:
+            case cmd_DeviceWriteEEprom:
+            case cmd_DeviceVerify:
+                led_activity();
+                break;
+            default:
+                break;
+            }
+
             switch (cmd) {
 
             /* ---------------- interface ---------------- */

@@ -45,17 +45,31 @@
  *   GPIO2, 8, 9       strapping pins
  */
 #if ESC4W_USB_TINYUSB
-# define ESC4W_ESC_PINS             { 4, 5, 6, 7 }      /* ESP32-S3 */
-// #define ESC4W_ESC_PINS               { 4, 5, 6, 7, 8, 9 }
+/* Seeed Studio XIAO ESP32-S3 breakout board. Silkscreen labels map to
+ * GPIOs as follows:
+ *
+ *   ESC 1   D5    GPIO6
+ *   ESC 2   D4    GPIO5
+ *   ESC 3   D3    GPIO4
+ *   ESC 4   D10   GPIO9
+ */
+#  define ESC4W_ESC_PINS             { 6, 5, 4, 9 }      /* XIAO ESP32-S3 */
 #else
 #  define ESC4W_ESC_PINS             { 3, 4, 5, 6 }      /* ESP32-C3 */
 #endif
 
 /* Optional activity LED. Set to -1 to disable.
+ * The XIAO ESP32-S3 user LED (orange) is on GPIO21 and lights when the
+ * pin is driven low.
  * Note: GPIO48 on the S3-DevKitC-1 and GPIO8 on many C3 devkits are
  * addressable WS2812s, not plain LEDs. */
 #define ESC4W_LED_PIN                (21)
-#define ESC4W_LED_ACTIVE_LOW         0
+#define ESC4W_LED_ACTIVE_LOW         1
+
+/* During flash/EEPROM access the LED toggles once per 4-way command
+ * (roughly every 150 ms for a 256-byte block at 19200 baud). It returns
+ * to solid on this long after the last one. */
+#define ESC4W_LED_ACTIVITY_HOLD_MS   300
 
 /* ------------------------------------------------------------------ */
 /* 2. One-wire link to the ESC bootloader                              */
