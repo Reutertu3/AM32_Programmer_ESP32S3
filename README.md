@@ -29,12 +29,20 @@ flowchart LR
     D --> E4[ESC 4]
 ```
 
-**Works with:** [AM32 Configurator](https://am32.ca), [ESC Configurator](https://esc-configurator.com), BLHeliSuite32 and the Betaflight Configurator's ESC tab.
+**Works with:** [AM32 Configurator](https://am32.ca) (tested).
+
+ **Should also work with:** [ESC Configurator](https://esc-configurator.com), BLHeliSuite32 and the Betaflight Configurator's ESC tab.
 
 ## Hardware
 
 <p align="center">
   <a href="docs/schematic.pdf"><img src="docs/schematic.png" alt="Schematic: AM32 Programming Breakout for XIAO ESP32-S3, Rev 0.2" width="760"></a>
+</p>
+
+<p align="center">
+  <img src="docs/board.jpg" alt="Assembled Rev 0.1 breakout board with a XIAO ESP32-S3, six JR headers and the UART0 header" width="560">
+  <br>
+  <sub>Assembled Rev 0.1 board: 33 Ω resistors fitted, clamps and CN1 left unpopulated.</sub>
 </p>
 
 The breakout board (KiCad, Rev 0.2, [PDF](docs/schematic.pdf)) has six ESC channels. The firmware drives the first four by default.
@@ -54,7 +62,7 @@ To use channels 5 and 6, set `ESC4W_ESC_COUNT` to `6` and `ESC4W_ESC_PINS` to `{
 
 | Ref | Purpose | Pinout |
 |---|---|---|
-| CN1 | 4-in-1 ESC harness | 1 GND · 2–7 ESC1–6 · 8 n/c |
+| CN1 | Custom ESC harness | 1 GND · 2–7 ESC1–6 · 8 n/c |
 | J1–J6 | single ESCs, JR servo plug | 1 GND · 2 n/c · 3 signal |
 | J7 | UART0 console (115200) | 1 GND · 2 TX (D6) · 3 RX (D7) |
 
@@ -67,8 +75,6 @@ To use channels 5 and 6, set `ESC4W_ESC_COUNT` to `6` and `ESC4W_ESC_PINS` to `{
 - **No external pull-up.** The line idles high through the ESP32's internal pull-up (`ESC4W_RX_INTERNAL_PULLUP`), which is enough for short leads.
 - **D1–D6, BAT54S clamps (optional):** hold each GPIO between about −0.3 V and 3.6 V if the ESC side carries a higher voltage. The 470 Ω resistor limits the clamp current. The board works without them.
 
-> [!NOTE]
-> On **Rev 0.1** boards the clamps are drawn reversed and short the 3V3 rail, so leave D1–D6 unfitted there. Fixed in Rev 0.2.
 
 **Power:** the programmer never powers the ESC; J1–J6 leave the centre pin unconnected. Power the ESC from its own supply with props off. Ground is shared through the connectors.
 
@@ -95,12 +101,12 @@ Requires ESP-IDF v5.3 or newer; tested on v6.0.1. The component manager fetches 
 > [!IMPORTANT]
 > If an old `sdkconfig` exists, delete it before building. `sdkconfig.defaults` sets the 1 kHz tick and keeps the console off USB, and both are required.
 
-## Why the S3 and not the C3?
+## Why the S3?
 
 The AM32 Configurator only lists serial ports whose USB vendor ID is on a built-in allow-list. Espressif's `0x303A` isn't on it. The C3's USB descriptors are fixed in ROM. The S3 has a USB-OTG peripheral, so TinyUSB can present as an STM32 virtual COM port (`0483:5740`), the same as a real flight controller.
 
 > [!WARNING]
-> That vendor ID belongs to STMicroelectronics. It is fine for a bench tool, but don't ship a product with it.
+> That vendor ID belongs to STMicroelectronics.
 
 ## Diagnostic trace
 
