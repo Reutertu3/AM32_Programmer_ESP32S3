@@ -365,6 +365,11 @@ void esc4way_process(void)
                 if (ack_out == ACK_OK) {
                     out_param_len = mem.num_bytes ? mem.num_bytes : 256;
                     out_param = s_param_buf;
+                    /* First bytes only: enough for the AM32 settings
+                     * header (boot byte, layout, bootloader, fw major,
+                     * fw minor, name...) without flooding the trace. */
+                    host_log_hex("   data:", s_param_buf,
+                                 out_param_len < 24 ? out_param_len : 24);
                 }
                 break;
 

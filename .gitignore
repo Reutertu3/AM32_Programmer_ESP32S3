@@ -26,6 +26,9 @@ __pycache__/
 .venv/
 venv/
 
+# --- graphify (knowledge graph output, regenerated locally) ---
+/graphify-out/
+
 # --- misc ---
 .DS_Store
 Thumbs.db
