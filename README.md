@@ -2,7 +2,7 @@
 
 # AM32 Programmer · ESP32-S3
 
-**A USB programmer for 4-in-1 ESCs, built on a Seeed XIAO ESP32-S3.**
+**A USB programmer for 4-in-1 and single ESCs, built on a Seeed XIAO ESP32-S3.**
 
 Configure and flash AM32, BLHeli_32 and BLHeli_S ESCs without a flight controller.
 
@@ -33,16 +33,44 @@ flowchart LR
 
 ## Hardware
 
-| ESC | XIAO pin | GPIO |
-|:---:|:---:|:---:|
-| 1 | D5 | 6 |
-| 2 | D4 | 5 |
-| 3 | D3 | 4 |
-| 4 | D10 | 9 |
+<p align="center">
+  <a href="schematic.pdf"><img src="docs/schematic.png" alt="Schematic: AM32 Programming Breakout for XIAO ESP32-S3, Rev 0.1" width="760"></a>
+</p>
 
-- Put a **470 Ω series resistor** in each signal line, close to the XIAO. It limits current when both sides drive the line at once, and it protects the GPIO.
-- Add a **10 kΩ pull-up to 3V3** on each line if the leads are longer than a few centimetres. The internal pull-up is weak.
-- **Power the ESC from its own supply** with props off, and connect its ground to the XIAO's ground. The programmer does not power the ESC.
+The breakout board (KiCad, Rev 0.1, [PDF](schematic.pdf)) has six ESC channels. The firmware drives the first four by default.
+
+| ESC | XIAO pin | GPIO | Enabled |
+|:---:|:---:|:---:|:---:|
+| 1 | D5 | 6 | ✅ |
+| 2 | D4 | 5 | ✅ |
+| 3 | D3 | 4 | ✅ |
+| 4 | D10 | 9 | ✅ |
+| 5 | D9 | 8 | – |
+| 6 | D8 | 7 | – |
+
+To use channels 5 and 6, set `ESC4W_ESC_COUNT` to `6` and `ESC4W_ESC_PINS` to `{ 6, 5, 4, 9, 8, 7 }` in [`main/config.h`](main/config.h).
+
+**Connectors**
+
+| Ref | Purpose | Pinout |
+|---|---|---|
+| CN1 | 4-in-1 ESC harness | 1 GND · 2–7 ESC1–6 · 8 n/c |
+| J1–J6 | single ESCs, JR servo plug | 1 GND · 2 n/c · 3 signal |
+| J7 | UART0 console (115200) | 1 GND · 2 TX (D6) · 3 RX (D7) |
+
+> [!CAUTION]
+> Standard FC-to-ESC harnesses carry battery voltage, current sense and telemetry on some pins. Check your harness against the CN1 pinout before plugging it in. Battery voltage on an ESC line goes straight to a GPIO.
+
+**Signal conditioning**
+
+- **R1–R6, 470 Ω in series:** limits current when both sides drive the line at once, and protects the GPIO. At 19200 baud the added delay is negligible.
+- **No external pull-up.** The line idles high through the ESP32's internal pull-up (`ESC4W_RX_INTERNAL_PULLUP`), which is enough for short leads.
+- **D1–D6 (BAT54S clamps) are optional.** The board works without them.
+
+> [!WARNING]
+> **Rev 0.1: do not fit D1–D6.** The clamps are drawn reversed: pin 1 (anode) goes to 3V3 and pin 2 (cathode) to GND. Fitted as drawn, they short the 3V3 rail. For a correct clamp, pin 1 goes to GND, pin 2 to 3V3 and pin 3 (common) to the signal line.
+
+**Power:** the programmer never powers the ESC; J1–J6 leave the centre pin unconnected. Power the ESC from its own supply with props off. Ground is shared through the connectors.
 
 | Onboard LED | Meaning |
 |---|---|
@@ -62,7 +90,7 @@ idf.py build flash
 Requires ESP-IDF v5.3 or newer; tested on v6.0.1. The component manager fetches `esp_tinyusb` automatically.
 
 > [!TIP]
-> After the first flash, the app takes over the USB port, so esptool can no longer reset the board into download mode. To reflash, **hold BOOT, tap RESET, release BOOT**, then flash as usual.
+> After the first flash, the app takes over the USB port, so esptool can no longer reset the board into download mode. To reflash, **hold BOOT, tap RESET, release BOOT**, then flash as usual. Boot messages and panics appear on the J7 console header.
 
 > [!IMPORTANT]
 > If an old `sdkconfig` exists, delete it before building. `sdkconfig.defaults` sets the 1 kHz tick and keeps the console off USB, and both are required.
