@@ -34,10 +34,10 @@ flowchart LR
 ## Hardware
 
 <p align="center">
-  <a href="schematic.pdf"><img src="docs/schematic.png" alt="Schematic: AM32 Programming Breakout for XIAO ESP32-S3, Rev 0.1" width="760"></a>
+  <a href="docs/schematic.pdf"><img src="docs/schematic.png" alt="Schematic: AM32 Programming Breakout for XIAO ESP32-S3, Rev 0.2" width="760"></a>
 </p>
 
-The breakout board (KiCad, Rev 0.1, [PDF](schematic.pdf)) has six ESC channels. The firmware drives the first four by default.
+The breakout board (KiCad, Rev 0.2, [PDF](docs/schematic.pdf)) has six ESC channels. The firmware drives the first four by default.
 
 | ESC | XIAO pin | GPIO | Enabled |
 |:---:|:---:|:---:|:---:|
@@ -59,16 +59,16 @@ To use channels 5 and 6, set `ESC4W_ESC_COUNT` to `6` and `ESC4W_ESC_PINS` to `{
 | J7 | UART0 console (115200) | 1 GND · 2 TX (D6) · 3 RX (D7) |
 
 > [!CAUTION]
-> Standard FC-to-ESC harnesses carry battery voltage, current sense and telemetry on some pins. Check your harness against the CN1 pinout before plugging it in. Battery voltage on an ESC line goes straight to a GPIO.
+> Standard FC-to-ESC harnesses carry battery voltage, current sense and telemetry on some pins. Check your harness against the CN1 pinout before plugging it in. Without the clamps below, battery voltage on an ESC line reaches a GPIO through only 470 Ω.
 
 **Signal conditioning**
 
 - **R1–R6, 470 Ω in series:** limits current when both sides drive the line at once, and protects the GPIO. At 19200 baud the added delay is negligible.
 - **No external pull-up.** The line idles high through the ESP32's internal pull-up (`ESC4W_RX_INTERNAL_PULLUP`), which is enough for short leads.
-- **D1–D6 (BAT54S clamps) are optional.** The board works without them.
+- **D1–D6, BAT54S clamps (optional):** hold each GPIO between about −0.3 V and 3.6 V if the ESC side carries a higher voltage. The 470 Ω resistor limits the clamp current. The board works without them.
 
-> [!WARNING]
-> **Rev 0.1: do not fit D1–D6.** The clamps are drawn reversed: pin 1 (anode) goes to 3V3 and pin 2 (cathode) to GND. Fitted as drawn, they short the 3V3 rail. For a correct clamp, pin 1 goes to GND, pin 2 to 3V3 and pin 3 (common) to the signal line.
+> [!NOTE]
+> On **Rev 0.1** boards the clamps are drawn reversed and short the 3V3 rail, so leave D1–D6 unfitted there. Fixed in Rev 0.2.
 
 **Power:** the programmer never powers the ESC; J1–J6 leave the centre pin unconnected. Power the ESC from its own supply with props off. Ground is shared through the connectors.
 
